@@ -1,0 +1,1844 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Learn to Read a Clock</title>
+  <style>
+    :root {
+      --bg1: #fff7d6;
+      --bg2: #dff7ff;
+      --card: #ffffff;
+      --text: #24324a;
+      --accent3: #6c8cff;
+      --shadow: 0 12px 30px rgba(36, 50, 74, 0.12);
+      --clock-size: min(72vw, 360px);
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
+      color: var(--text);
+      background:
+        radial-gradient(circle at top left, #fff0b8 0%, transparent 30%),
+        radial-gradient(circle at top right, #d6f4ff 0%, transparent 28%),
+        linear-gradient(135deg, var(--bg1), var(--bg2));
+      min-height: 100vh;
+    }
+
+    .app {
+      max-width: 1100px;
+      margin: 0 auto;
+      padding: 24px;
+    }
+
+    .header {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+      margin-bottom: 16px;
+    }
+
+    .title {
+      text-align: center;
+    }
+
+    .title h1 {
+      margin: 0 0 6px;
+      font-size: clamp(1.8rem, 4vw, 2.8rem);
+    }
+
+    .title p {
+      margin: 0;
+      font-size: 1rem;
+      color: #5c6b86;
+    }
+
+    .theme-corner {
+      position: absolute;
+      right: 0;
+      top: 50%;
+      transform: translateY(-50%);
+    }
+
+    .theme-corner select {
+      padding: 8px 12px;
+      border-radius: 12px;
+      font-size: 0.85rem;
+      font-weight: 700;
+      background: #f5f8ff;
+      border: 2px solid #dfe8ff;
+      cursor: pointer;
+    }
+
+    .mode-switcher {
+      display: flex;
+      justify-content: center;
+      gap: 12px;
+      margin-bottom: 20px;
+    }
+
+    .mode-btn {
+      padding: 14px 32px;
+      border: 3px solid transparent;
+      border-radius: 50px;
+      font-size: 1.1rem;
+      font-weight: 900;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.2s ease;
+      box-shadow: 0 4px 14px rgba(0,0,0,0.1);
+    }
+
+    .mode-btn:hover { transform: translateY(-2px); }
+
+    .difficulty-picker {
+      display: flex;
+      justify-content: center;
+      gap: 8px;
+      margin-bottom: 18px;
+      flex-wrap: wrap;
+    }
+
+    .diff-pill {
+      padding: 8px 14px;
+      border: 2px solid #e0e0e0;
+      border-radius: 30px;
+      font-size: 0.85rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      background: #f5f5f5;
+      color: #666;
+      transition: all 0.2s ease;
+      box-shadow: none;
+    }
+
+    .diff-pill:hover {
+      transform: translateY(-1px);
+      border-color: #bbb;
+    }
+
+    .diff-pill.active {
+      color: #fff;
+      border-color: transparent;
+      box-shadow: 0 3px 12px rgba(0,0,0,0.15);
+      transform: scale(1.05);
+    }
+
+    .diff-pill[data-value="hour"].active {
+      background: linear-gradient(135deg, #81c784, #4caf50);
+    }
+
+    .diff-pill[data-value="half"].active {
+      background: linear-gradient(135deg, #aed581, #7cb342);
+    }
+
+    .diff-pill[data-value="quarter"].active {
+      background: linear-gradient(135deg, #ffb74d, #f57c00);
+    }
+
+    .diff-pill[data-value="five"].active {
+      background: linear-gradient(135deg, #ff8a65, #e64a19);
+    }
+
+    .diff-pill[data-value="minute"].active {
+      background: linear-gradient(135deg, #ba68c8, #7b1fa2);
+    }
+
+    .diff-pill[data-value="second"].active {
+      background: linear-gradient(135deg, #e53935, #b71c1c);
+    }
+
+    .mode-btn.inactive {
+      background: #f0f0f0;
+      color: #888;
+      border: 3px solid #ddd;
+      box-shadow: none;
+    }
+
+    .mode-btn.learning.active {
+      background: linear-gradient(135deg, #7bd389, #4caf50);
+      color: #fff;
+      border-color: #2e7d32;
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(76, 175, 80, 0.35);
+    }
+
+    .mode-btn.test.active {
+      background: linear-gradient(135deg, #ff8fab, #f44771);
+      color: #fff;
+      border-color: #c62828;
+      transform: scale(1.05);
+      box-shadow: 0 6px 20px rgba(244, 71, 113, 0.35);
+    }
+
+    .layout {
+      display: grid;
+      grid-template-columns: 1.1fr 0.9fr;
+      gap: 24px;
+    }
+
+    .panel {
+      background: var(--card);
+      border-radius: 24px;
+      box-shadow: var(--shadow);
+      padding: 22px;
+    }
+
+    .clock-panel {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .clock-wrap {
+      width: var(--clock-size);
+      height: var(--clock-size);
+      position: relative;
+    }
+
+    .clock {
+      width: 100%;
+      height: 100%;
+      border-radius: 50%;
+      background: radial-gradient(circle at center, #fff 0% 60%, #f8f4ff 61% 100%);
+      border: 10px solid #ffcf5a;
+      position: relative;
+      box-shadow: inset 0 0 0 6px #fff4bf, 0 10px 28px rgba(0,0,0,0.08);
+      user-select: none;
+      touch-action: none;
+      overflow: hidden;
+    }
+
+    .tick-container {
+      position: absolute;
+      inset: 0;
+    }
+
+    .tick-mark {
+      position: absolute;
+      left: 50%;
+      top: 0;
+      width: 2px;
+      height: 50%;
+      margin-left: -1px;
+      transform-origin: bottom center;
+      pointer-events: none;
+    }
+
+    .tick-mark::after {
+      content: '';
+      position: absolute;
+      top: 6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 2px;
+      height: 10px;
+      background: #b0c4ff;
+      border-radius: 2px;
+    }
+
+    .tick-mark.major::after {
+      width: 4px;
+      height: 16px;
+      top: 4px;
+      background: #6c8cff;
+      border-radius: 3px;
+    }
+
+    .number {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 32px;
+      height: 32px;
+      margin-left: -16px;
+      margin-top: -16px;
+      display: grid;
+      place-items: center;
+      font-size: 1.25rem;
+      font-weight: 800;
+      color: var(--accent3);
+      pointer-events: none;
+    }
+
+    .hand {
+      position: absolute;
+      left: 50%;
+      bottom: 50%;
+      transform-origin: bottom center;
+      border-radius: 999px;
+      transition: transform 0.5s ease;
+      cursor: grab;
+    }
+
+    .hand::before {
+      content: '';
+      position: absolute;
+      top: -6px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 14px;
+      height: 14px;
+      border-radius: 50%;
+      background: rgba(255,255,255,0.9);
+      box-shadow: 0 0 8px 3px rgba(108, 140, 255, 0.5);
+      animation: handPulse 1.8s ease-in-out infinite;
+      pointer-events: none;
+    }
+
+    .hand.dragged::before {
+      animation: none;
+      opacity: 0;
+      transition: opacity 0.3s ease;
+    }
+
+    .hand.dragging {
+      transition: none;
+      cursor: grabbing;
+    }
+
+    .hand.dragging::before {
+      animation: none;
+      background: rgba(255,255,255,1);
+      box-shadow: 0 0 12px 5px rgba(108, 140, 255, 0.7);
+      opacity: 1;
+    }
+
+    @keyframes handPulse {
+      0%, 100% { transform: translateX(-50%) scale(1); opacity: 0.7; }
+      50% { transform: translateX(-50%) scale(1.4); opacity: 1; }
+    }
+
+    .hour-hand {
+      width: 11px;
+      height: 25%;
+      margin-left: -5px;
+      background: linear-gradient(180deg, #ff8fab, #ff5d8f);
+      z-index: 4;
+    }
+
+    .hour-hand::before {
+      box-shadow: 0 0 8px 3px rgba(255, 93, 143, 0.5);
+    }
+
+    .hour-hand.dragging::before {
+      box-shadow: 0 0 12px 5px rgba(255, 93, 143, 0.7);
+    }
+
+    .minute-hand {
+      width: 6px;
+      height: 38%;
+      margin-left: -3px;
+      background: linear-gradient(180deg, #4dabf7, #2d6cdf);
+      z-index: 5;
+    }
+
+    .second-hand {
+      width: 2px;
+      height: 42%;
+      margin-left: -1px;
+      background: #e53935;
+      z-index: 6;
+      transition: none;
+      cursor: default;
+      display: none;
+    }
+
+    .second-hand.visible {
+      display: block;
+    }
+
+    .second-hand::before {
+      display: none;
+    }
+
+    .drag-hint {
+      position: absolute;
+      bottom: -32px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: rgba(36, 50, 74, 0.85);
+      color: #fff;
+      font-size: 0.78rem;
+      font-weight: 700;
+      padding: 5px 12px;
+      border-radius: 8px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 1;
+      transition: opacity 0.5s ease;
+      z-index: 20;
+    }
+
+    .drag-hint.fade-out {
+      opacity: 0;
+    }
+
+    .center-dot {
+      position: absolute;
+      left: 50%;
+      top: 50%;
+      width: 18px;
+      height: 18px;
+      margin-left: -9px;
+      margin-top: -9px;
+      background: #24324a;
+      border: 4px solid #fff;
+      border-radius: 50%;
+      z-index: 10;
+      box-shadow: 0 2px 10px rgba(0,0,0,0.18);
+    }
+
+    .digital {
+      font-size: clamp(1.6rem, 3.5vw, 2.2rem);
+      font-weight: 900;
+      padding: 10px 20px;
+      background: #f3f8ff;
+      border-radius: 16px;
+      color: #214caa;
+      letter-spacing: 1px;
+      box-shadow: inset 0 0 0 3px #d9e7ff;
+    }
+
+    .speak-btn-wrap {
+      width: 100%;
+      display: flex;
+      justify-content: flex-end;
+      margin-top: -4px;
+    }
+
+    .speak-btn-wrap button {
+      border: none;
+      border-radius: 14px;
+      padding: 10px 18px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      background: linear-gradient(135deg, #ffe7a3, #ffd166);
+      color: #785400;
+      box-shadow: 0 4px 12px rgba(0,0,0,0.08);
+      transition: transform 0.12s ease;
+    }
+
+    .speak-btn-wrap button:hover { transform: translateY(-2px); }
+
+    .controls {
+      display: grid;
+      grid-template-columns: repeat(2, 1fr);
+      gap: 10px;
+      width: 100%;
+    }
+
+    .controls.single-col {
+      grid-template-columns: 1fr;
+    }
+
+    button, select {
+      border: none;
+      border-radius: 16px;
+      padding: 13px 14px;
+      font-size: 0.95rem;
+      font-weight: 800;
+      font-family: inherit;
+    }
+
+    button {
+      cursor: pointer;
+      transition: transform 0.12s ease, box-shadow 0.12s ease;
+      box-shadow: 0 5px 14px rgba(0,0,0,0.08);
+    }
+
+    button:hover { transform: translateY(-2px); }
+    button:active { transform: translateY(0); }
+    button:disabled { opacity: 0.5; cursor: not-allowed; transform: none; }
+
+    .btn-pink { background: #ffb3c7; color: #69213b; }
+    .btn-green { background: #b8f2cb; color: #195b31; }
+    .btn-blue { background: #bfd2ff; color: #1f449d; }
+    .btn-yellow { background: #ffe7a3; color: #785400; }
+    .btn-purple { background: #dcc8ff; color: #512f92; }
+    .btn-red { background: #ffc3c3; color: #8a1f1f; }
+    .btn-teal { background: #b2f5ea; color: #1a5c50; }
+
+    .side-panel {
+      display: flex;
+      flex-direction: column;
+      gap: 14px;
+    }
+
+    .section-title {
+      margin: 0 0 8px;
+      font-size: 1.15rem;
+    }
+
+    .score-box {
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      gap: 10px;
+    }
+
+    .stat {
+      background: #f8fbff;
+      border-radius: 16px;
+      padding: 12px 8px;
+      text-align: center;
+      box-shadow: inset 0 0 0 2px #e5efff;
+    }
+
+    .stat .big {
+      display: block;
+      font-size: 1.5rem;
+      font-weight: 900;
+    }
+
+    .stat .big.green { color: #166534; }
+    .stat .big.red { color: #9a1f1f; }
+    .stat .big.blue { color: #2447a8; }
+    .stat .big.orange { color: #7a4400; }
+
+    .stat .label-text {
+      font-size: 0.75rem;
+      font-weight: 700;
+      color: #5c6b86;
+      margin-top: 2px;
+    }
+
+    .message {
+      min-height: 60px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      text-align: center;
+      padding: 14px;
+      border-radius: 16px;
+      background: linear-gradient(135deg, #fff5fb, #f5fbff);
+      box-shadow: inset 0 0 0 3px #f0e7ff;
+      font-size: 1.05rem;
+      font-weight: 800;
+    }
+
+    .message.good {
+      color: #166534;
+      background: linear-gradient(135deg, #f0fff4, #edfff8);
+      box-shadow: inset 0 0 0 3px #c8f1d6;
+    }
+
+    .message.bad {
+      color: #9a1f1f;
+      background: linear-gradient(135deg, #fff3f3, #fff8f8);
+      box-shadow: inset 0 0 0 3px #ffd1d1;
+    }
+
+    .question {
+      background: #fcfcff;
+      border-radius: 16px;
+      padding: 14px;
+      box-shadow: inset 0 0 0 2px #ecefff;
+    }
+
+    .prompt {
+      font-size: 1.02rem;
+      font-weight: 800;
+      margin-bottom: 10px;
+    }
+
+    .answers {
+      display: grid;
+      gap: 8px;
+    }
+
+    .answer-btn {
+      width: 100%;
+      text-align: left;
+      background: #eef4ff;
+      color: #1d3f8f;
+      padding: 12px 16px;
+    }
+
+    .answer-btn.correct {
+      background: #c8f1d6;
+      color: #155724;
+    }
+
+    .answer-btn.wrong {
+      background: #ffd0d0;
+      color: #8d1d1d;
+    }
+
+    .suggestions {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-top: 8px;
+    }
+
+    .suggest-btn {
+      background: #f0f4ff;
+      color: #3355aa;
+      border: 2px solid #d9e7ff;
+      border-radius: 12px;
+      padding: 10px 6px;
+      font-size: 0.9rem;
+      font-weight: 800;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.15s ease;
+      box-shadow: none;
+    }
+
+    .suggest-btn:hover {
+      background: #d9e7ff;
+      transform: translateY(-2px);
+    }
+
+    .timer-display {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      padding: 10px 16px;
+      background: linear-gradient(135deg, #fff0f6, #fff5fb);
+      border-radius: 14px;
+      box-shadow: inset 0 0 0 2px #ffd6e8;
+      font-size: 1.3rem;
+      font-weight: 900;
+      color: #8b1a4a;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .progress-bar {
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      padding: 8px 12px;
+      background: #f8fbff;
+      border-radius: 12px;
+      box-shadow: inset 0 0 0 2px #e5efff;
+    }
+
+    .progress-bar .progress-track {
+      flex: 1;
+      height: 10px;
+      background: #e5efff;
+      border-radius: 10px;
+      overflow: hidden;
+    }
+
+    .progress-bar .progress-fill {
+      height: 100%;
+      background: linear-gradient(90deg, #7bd389, #4caf50);
+      border-radius: 10px;
+      transition: width 0.3s ease;
+    }
+
+    .progress-bar .progress-text {
+      font-size: 0.85rem;
+      font-weight: 800;
+      color: #50607e;
+      white-space: nowrap;
+    }
+
+    .countdown-overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      background: rgba(255,255,255,0.88);
+      border-radius: 50%;
+      z-index: 100;
+      font-size: 4rem;
+      font-weight: 900;
+      color: #f44771;
+      pointer-events: none;
+    }
+
+    @keyframes countPop {
+      0% { transform: scale(0.5); opacity: 0; }
+      50% { transform: scale(1.3); opacity: 1; }
+      100% { transform: scale(1); opacity: 1; }
+    }
+
+    .countdown-overlay span {
+      animation: countPop 0.4s ease;
+    }
+
+    .result-card {
+      text-align: center;
+      padding: 20px;
+      background: linear-gradient(135deg, #f0fff4, #fffff0);
+      border-radius: 18px;
+      box-shadow: inset 0 0 0 3px #c8f1d6;
+    }
+
+    .result-card .result-percent {
+      font-size: 3rem;
+      font-weight: 900;
+      color: #2e7d32;
+    }
+
+    .result-card .result-detail {
+      font-size: 1rem;
+      color: #50607e;
+      margin-top: 6px;
+    }
+
+    .result-card.poor .result-percent { color: #c62828; }
+    .result-card.okay .result-percent { color: #f57c00; }
+
+    .toolbar {
+      display: grid;
+      gap: 10px;
+    }
+
+    .row {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 10px;
+      align-items: center;
+    }
+
+    .label {
+      font-weight: 800;
+      color: #50607e;
+      margin-bottom: 4px;
+      display: block;
+      font-size: 0.9rem;
+    }
+
+    select {
+      width: 100%;
+      background: #f5f8ff;
+      box-shadow: inset 0 0 0 2px #dfe8ff;
+      color: #24324a;
+      cursor: pointer;
+    }
+
+    .hidden { display: none !important; }
+
+    .test-info {
+      text-align: center;
+      font-size: 0.9rem;
+      color: #5c6b86;
+      padding: 8px;
+      background: #f8fbff;
+      border-radius: 12px;
+    }
+
+    .leaderboard {
+      background: #fffdf5;
+      border-radius: 14px;
+      padding: 12px;
+      box-shadow: inset 0 0 0 2px #ffe9a8;
+    }
+
+    .leaderboard h3 {
+      margin: 0 0 8px;
+      font-size: 1rem;
+      color: #785400;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      padding: 0;
+      margin: 0;
+      font-size: 0.9rem;
+    }
+
+    .leaderboard-list li {
+      display: flex;
+      justify-content: space-between;
+      padding: 6px 8px;
+      border-radius: 8px;
+      font-weight: 700;
+    }
+
+    .leaderboard-list li:nth-child(odd) {
+      background: #fff8e0;
+    }
+
+    .leaderboard-list li .lb-score {
+      color: #166534;
+      font-weight: 900;
+    }
+
+    .name-modal-backdrop {
+      position: fixed;
+      inset: 0;
+      background: rgba(0,0,0,0.4);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      z-index: 9999;
+    }
+
+    .name-modal {
+      background: #fff;
+      border-radius: 20px;
+      padding: 28px;
+      max-width: 360px;
+      width: 90%;
+      text-align: center;
+      box-shadow: 0 20px 60px rgba(0,0,0,0.2);
+    }
+
+    .name-modal h3 {
+      margin: 0 0 6px;
+      font-size: 1.3rem;
+      color: #2e7d32;
+    }
+
+    .name-modal p {
+      margin: 0 0 16px;
+      font-size: 0.95rem;
+      color: #5c6b86;
+    }
+
+    .name-modal input {
+      width: 100%;
+      border: 2px solid #dfe8ff;
+      border-radius: 12px;
+      padding: 12px 16px;
+      font-size: 1.1rem;
+      font-weight: 700;
+      font-family: inherit;
+      outline: none;
+      text-align: center;
+    }
+
+    .name-modal input:focus { border-color: #6c8cff; }
+
+    .name-modal .modal-btns {
+      display: flex;
+      gap: 10px;
+      margin-top: 14px;
+      justify-content: center;
+    }
+
+    .name-modal .modal-btns button {
+      padding: 10px 20px;
+      border-radius: 12px;
+      font-size: 0.95rem;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); }
+      50% { transform: scale(1.05); }
+    }
+
+    .pulse { animation: pulse 0.4s ease; }
+
+    @media (max-width: 900px) {
+      .layout { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 560px) {
+      .controls, .row { grid-template-columns: 1fr; }
+      .suggestions { grid-template-columns: repeat(3, 1fr); }
+      .score-box { grid-template-columns: repeat(2, 1fr); }
+      .panel { padding: 14px; }
+      .mode-btn { padding: 12px 20px; font-size: 1rem; }
+      .header { flex-direction: column; gap: 8px; }
+      .theme-corner { position: static; transform: none; }
+      .diff-pill { padding: 6px 10px; font-size: 0.78rem; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="header">
+      <div class="title">
+        <h1>🕒 Learn to Read a Clock</h1>
+        <p>Move the hands, answer questions, and have fun learning time!</p>
+      </div>
+      <div class="theme-corner">
+        <select id="theme">
+          <option value="sunny">☀️ Sunny</option>
+          <option value="ocean">🌊 Ocean</option>
+          <option value="candy">🍬 Candy</option>
+          <option value="space">🌙 Space</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="mode-switcher">
+      <button class="mode-btn learning active" id="learningModeBtn">📚 Learning Mode</button>
+      <button class="mode-btn test inactive" id="testModeBtn">🎯 Quiz Mode</button>
+    </div>
+
+    <div class="difficulty-picker" id="difficultyPicker">
+      <button class="diff-pill active" data-value="hour" title="Only full hours like 3:00, 7:00">🕐 Hour</button>
+      <button class="diff-pill" data-value="half" title="Half hours like 3:30, 7:30">🕜 Half</button>
+      <button class="diff-pill" data-value="quarter" title="Quarter hours like 3:15, 3:45">🕞 Quarter</button>
+      <button class="diff-pill" data-value="five" title="Every 5 minutes like 3:05, 3:10">🕔 5 min</button>
+      <button class="diff-pill" data-value="minute" title="Any minute like 3:07, 7:53">🕰️ 1 min</button>
+      <button class="diff-pill" data-value="second" title="Read hours, minutes AND seconds">⏱️ Seconds</button>
+    </div>
+
+    <div class="layout">
+      <section class="panel clock-panel">
+        <div class="clock-wrap">
+          <div class="clock" id="clock" aria-label="Analog clock"></div>
+        </div>
+
+        <div class="digital" id="digitalTime">--:--</div>
+
+        <div class="speak-btn-wrap" id="speakWrap">
+          <button id="speakBtn">🔊 Speak Time</button>
+        </div>
+
+        <!-- Learning Mode Controls -->
+        <div class="controls" id="learningControls">
+          <button class="btn-green" id="randomTimeBtn">🎲 Show Random Time</button>
+          <button class="btn-blue" id="askQuestionBtn">❓ What time is this?</button>
+          <button class="btn-teal" id="showCurrentTimeBtn">⌚ Current Time</button>
+          <button class="btn-purple" id="newSuggestionsBtn">🔄 New Suggestions</button>
+        </div>
+
+        <!-- Learning Suggestions -->
+        <div id="suggestionsWrap">
+          <div style="font-weight:800; font-size:0.9rem; color:#5c6b86; margin-bottom:6px;">Try these times:</div>
+          <div class="suggestions" id="suggestionsBox"></div>
+        </div>
+
+        <!-- Test Mode Controls -->
+        <div class="controls single-col hidden" id="testControls">
+          <button class="btn-pink" id="startTestBtn">🚀 Start Test (10 Questions)</button>
+          <button class="btn-red hidden" id="stopTestBtn">⏹ Stop Test</button>
+        </div>
+      </section>
+
+      <aside class="panel side-panel">
+        <div>
+          <h2 class="section-title">📊 Score Board</h2>
+          <div class="score-box">
+            <div class="stat">
+              <span class="big green" id="scoreCorrect">0</span>
+              <div class="label-text">✅ Right</div>
+            </div>
+            <div class="stat">
+              <span class="big red" id="scoreWrong">0</span>
+              <div class="label-text">❌ Wrong</div>
+            </div>
+            <div class="stat">
+              <span class="big blue" id="scoreTotal">0</span>
+              <div class="label-text">Total</div>
+            </div>
+            <div class="stat">
+              <span class="big orange" id="scoreStreak">0</span>
+              <div class="label-text">🔥 Streak</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Timer + Progress (Test Mode) -->
+        <div class="hidden" id="testStatusWrap">
+          <div class="timer-display" id="timerDisplay">
+            <span>⏱</span>
+            <span id="timerValue">0.0s</span>
+          </div>
+          <div class="progress-bar" style="margin-top:8px;" id="progressBar">
+            <div class="progress-track"><div class="progress-fill" id="progressFill" style="width:0%"></div></div>
+            <span class="progress-text" id="progressText">0/10</span>
+          </div>
+        </div>
+
+        <div>
+          <h2 class="section-title">💬 Encouragement</h2>
+          <div class="message" id="messageBox">Pick a mode above and start learning!</div>
+        </div>
+
+        <div class="question" id="questionSection">
+          <div class="prompt" id="questionPrompt">Questions will appear here.</div>
+          <div class="answers" id="answersBox"></div>
+        </div>
+
+        <!-- Result card (shown after test) -->
+        <div class="result-card hidden" id="resultCard">
+          <div class="result-percent" id="resultPercent">0%</div>
+          <div class="result-detail" id="resultDetail"></div>
+        </div>
+
+        <div class="toolbar">
+          <button class="btn-red" id="resetScoreBtn">🗑 Reset Score</button>
+        </div>
+
+        <div class="leaderboard" id="leaderboardSection">
+          <h3>🏆 Leaderboard</h3>
+          <ul class="leaderboard-list" id="leaderboardList"></ul>
+        </div>
+
+        <div class="test-info hidden" id="testInfo">
+          10 questions per round. A countdown plays between questions.
+        </div>
+      </aside>
+    </div>
+  </div>
+
+  <script>
+    const $ = id => document.getElementById(id);
+
+    const clock = $("clock");
+    const digitalTime = $("digitalTime");
+    const speakWrap = $("speakWrap");
+    const randomTimeBtn = $("randomTimeBtn");
+    const askQuestionBtn = $("askQuestionBtn");
+    const speakBtn = $("speakBtn");
+    const resetScoreBtn = $("resetScoreBtn");
+    const difficultyPicker = $("difficultyPicker");
+    const themeSelect = $("theme");
+    let currentDifficulty = "hour";
+    const messageBox = $("messageBox");
+    const questionPrompt = $("questionPrompt");
+    const answersBox = $("answersBox");
+    const questionSection = $("questionSection");
+    const scoreCorrect = $("scoreCorrect");
+    const scoreWrong = $("scoreWrong");
+    const scoreTotal = $("scoreTotal");
+    const scoreStreak = $("scoreStreak");
+    const learningModeBtn = $("learningModeBtn");
+    const testModeBtn = $("testModeBtn");
+    const learningControls = $("learningControls");
+    const testControls = $("testControls");
+    const startTestBtn = $("startTestBtn");
+    const stopTestBtn = $("stopTestBtn");
+    const timerDisplay = $("timerDisplay");
+    const timerValue = $("timerValue");
+    const suggestionsWrap = $("suggestionsWrap");
+    const suggestionsBox = $("suggestionsBox");
+    const testInfo = $("testInfo");
+    const showCurrentTimeBtn = $("showCurrentTimeBtn");
+    const newSuggestionsBtn = $("newSuggestionsBtn");
+    const leaderboardList = $("leaderboardList");
+    const testStatusWrap = $("testStatusWrap");
+    const progressFill = $("progressFill");
+    const progressText = $("progressText");
+    const resultCard = $("resultCard");
+    const resultPercent = $("resultPercent");
+    const resultDetail = $("resultDetail");
+
+    const TOTAL_QUESTIONS = 10;
+
+    let currentHour = 3;
+    let currentMinute = 0;
+    let currentSecond = 0;
+    let previousHour = -1;
+    let previousMinute = -1;
+    let activeQuestion = null;
+    let draggingHand = null;
+    let currentMode = "learning";
+    let testRunning = false;
+    let testQuestionNum = 0;
+    let timerInterval = null;
+    let timerStart = 0;
+    let countdownInterval = null;
+
+    const score = { correct: 0, wrong: 0, total: 0, streak: 0 };
+
+    const encouragementsGood = [
+      "Great job! 🌟", "Awesome work! 🎉", "You got it! 🥳",
+      "Fantastic! ⭐", "Super smart! 😄", "Perfect! 💯"
+    ];
+
+    const encouragementsBad = [
+      "Nice try! Keep going 💪", "You're learning! 😊",
+      "Almost! Try again 🌈", "Practice makes perfect ✨"
+    ];
+
+    function buildClockFace() {
+      clock.innerHTML = "";
+
+      const tickContainer = document.createElement("div");
+      tickContainer.className = "tick-container";
+
+      for (let i = 0; i < 60; i++) {
+        const tick = document.createElement("div");
+        tick.className = i % 5 === 0 ? "tick-mark major" : "tick-mark";
+        tick.style.transform = `rotate(${i * 6}deg)`;
+        tickContainer.appendChild(tick);
+      }
+      clock.appendChild(tickContainer);
+
+      for (let n = 1; n <= 12; n++) {
+        const number = document.createElement("div");
+        number.className = "number";
+        const angle = (n * 30 - 90) * Math.PI / 180;
+        const r = 36;
+        const x = 50 + Math.cos(angle) * r;
+        const y = 50 + Math.sin(angle) * r;
+        number.style.left = `${x}%`;
+        number.style.top = `${y}%`;
+        number.textContent = n;
+        clock.appendChild(number);
+      }
+
+      const hourHand = document.createElement("div");
+      hourHand.className = "hand hour-hand";
+      hourHand.id = "hourHand";
+
+      const minuteHand = document.createElement("div");
+      minuteHand.className = "hand minute-hand";
+      minuteHand.id = "minuteHand";
+
+      const secondHand = document.createElement("div");
+      secondHand.className = "hand second-hand";
+      secondHand.id = "secondHand";
+
+      const centerDot = document.createElement("div");
+      centerDot.className = "center-dot";
+
+      clock.appendChild(hourHand);
+      clock.appendChild(minuteHand);
+      clock.appendChild(secondHand);
+      clock.appendChild(centerDot);
+
+      if (!hasEverDragged) {
+        const hint = document.createElement("div");
+        hint.className = "drag-hint";
+        hint.textContent = "👆 Drag the hands to set time!";
+        clock.appendChild(hint);
+      }
+
+      addDragEvents(hourHand, "hour");
+      addDragEvents(minuteHand, "minute");
+    }
+
+    let liveClockMode = true;
+
+    function startRealtimeClock() {
+      function tick() {
+        const now = new Date();
+        const sec = now.getSeconds();
+        const ms = now.getMilliseconds();
+        const secDeg = (sec + ms / 1000) * 6;
+        const hand = document.getElementById("secondHand");
+        if (hand) hand.style.transform = `rotate(${secDeg}deg)`;
+
+        if (liveClockMode) {
+          const h = now.getHours() % 12;
+          const m = now.getMinutes();
+          currentSecond = sec;
+          if (h !== currentHour || m !== currentMinute) {
+            currentHour = h;
+            currentMinute = m;
+            const hourDeg = h * 30 + m * 0.5 + sec * (0.5/60);
+            const minDeg = m * 6 + sec * 0.1;
+            document.getElementById("hourHand").style.transform = `rotate(${hourDeg}deg)`;
+            document.getElementById("minuteHand").style.transform = `rotate(${minDeg}deg)`;
+          }
+          if (currentDifficulty === "second") {
+            digitalTime.textContent = formatTime(h, m, sec);
+          } else {
+            digitalTime.textContent = formatTime(h, m);
+          }
+        }
+
+        requestAnimationFrame(tick);
+      }
+      tick();
+    }
+
+    function stopLiveClock() {
+      liveClockMode = false;
+    }
+
+    function updateClock(hour, minute, isInit) {
+      if (!isInit) stopLiveClock();
+      currentHour = ((hour % 12) + 12) % 12;
+      currentMinute = ((minute % 60) + 60) % 60;
+      const hourDeg = currentHour * 30 + currentMinute * 0.5;
+      const minuteDeg = currentMinute * 6;
+      document.getElementById("hourHand").style.transform = `rotate(${hourDeg}deg)`;
+      document.getElementById("minuteHand").style.transform = `rotate(${minuteDeg}deg)`;
+      if (currentDifficulty === "second") {
+        digitalTime.textContent = formatTime(currentHour, currentMinute, currentSecond);
+      } else {
+        digitalTime.textContent = formatTime(currentHour, currentMinute);
+      }
+    }
+
+    function formatTime(hour, minute, second) {
+      const displayHour = hour === 0 ? 12 : hour;
+      let str = `${displayHour}:${String(minute).padStart(2, "0")}`;
+      if (second !== undefined) str += `:${String(second).padStart(2, "0")}`;
+      return str;
+    }
+
+    function timeToWords(hour, minute) {
+      const displayHour = hour === 0 ? 12 : hour;
+      if (minute === 0) return `${displayHour} o'clock`;
+      if (minute === 15) return `quarter past ${displayHour}`;
+      if (minute === 30) return `half past ${displayHour}`;
+      if (minute === 45) return `quarter to ${displayHour === 12 ? 1 : displayHour + 1}`;
+      return `${displayHour}:${String(minute).padStart(2, "0")}`;
+    }
+
+    function getAllowedMinutes() {
+      const mode = currentDifficulty;
+      if (mode === "hour") return [0];
+      if (mode === "half") return [0, 30];
+      if (mode === "quarter") return [0, 15, 30, 45];
+      if (mode === "five") return [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55];
+      return Array.from({length: 60}, (_, i) => i); // minute & second modes
+    }
+
+    function randomInt(min, max) {
+      return Math.floor(Math.random() * (max - min + 1)) + min;
+    }
+
+    function generateRandomTime() {
+      const minutes = getAllowedMinutes();
+      let hour, minute;
+      let attempts = 0;
+      do {
+        hour = randomInt(1, 12) % 12;
+        minute = minutes[randomInt(0, minutes.length - 1)];
+        attempts++;
+      } while (hour === previousHour && minute === previousMinute && attempts < 30);
+      previousHour = hour;
+      previousMinute = minute;
+      return { hour, minute };
+    }
+
+    function setRandomTime() {
+      const t = generateRandomTime();
+      updateClock(t.hour, t.minute);
+      clearQuestion();
+      setMessage("🎲 Here's a new time! Can you read it?");
+      generateSuggestions();
+    }
+
+    function showCurrentTime() {
+      const now = new Date();
+      const h = now.getHours() % 12;
+      const m = now.getMinutes();
+      liveClockMode = true;
+      updateClock(h, m, true);
+      clearQuestion();
+      setMessage(`⌚ Showing live time — clock moves with real time!`);
+    }
+
+    function setMessage(text, type = "") {
+      messageBox.textContent = text;
+      messageBox.className = `message ${type}`.trim();
+      messageBox.classList.add("pulse");
+      setTimeout(() => messageBox.classList.remove("pulse"), 400);
+    }
+
+    function updateScoreUI() {
+      scoreCorrect.textContent = score.correct;
+      scoreWrong.textContent = score.wrong;
+      scoreTotal.textContent = score.total;
+      scoreStreak.textContent = score.streak;
+    }
+
+    function clearQuestion() {
+      activeQuestion = null;
+      questionPrompt.textContent = "Questions will appear here.";
+      answersBox.innerHTML = "";
+      digitalTime.classList.remove("hidden");
+      speakWrap.classList.remove("hidden");
+    }
+
+    function shuffle(array) {
+      const copy = [...array];
+      for (let i = copy.length - 1; i > 0; i--) {
+        const j = Math.floor(Math.random() * (i + 1));
+        [copy[i], copy[j]] = [copy[j], copy[i]];
+      }
+      return copy;
+    }
+
+    function createQuestion() {
+      let correct;
+      if (currentDifficulty === "second") {
+        currentSecond = new Date().getSeconds();
+        correct = formatTime(currentHour, currentMinute, currentSecond);
+      } else {
+        correct = formatTime(currentHour, currentMinute);
+      }
+      const choices = new Set([correct]);
+
+      while (choices.size < 4) {
+        const t = generateRandomTime();
+        if (currentDifficulty === "second") {
+          choices.add(formatTime(t.hour, t.minute, randomInt(0, 59)));
+        } else {
+          choices.add(formatTime(t.hour, t.minute));
+        }
+      }
+
+      const options = shuffle([...choices]);
+      activeQuestion = { correct };
+
+      questionSection.classList.remove("hidden");
+      resultCard.classList.add("hidden");
+      digitalTime.classList.add("hidden");
+      speakWrap.classList.add("hidden");
+      questionPrompt.textContent = "⏰ What time is this clock showing?";
+      answersBox.innerHTML = "";
+
+      options.forEach(option => {
+        const btn = document.createElement("button");
+        btn.className = "answer-btn";
+        btn.textContent = option;
+        btn.addEventListener("click", () => answerQuestion(option, btn));
+        answersBox.appendChild(btn);
+      });
+    }
+
+    function answerQuestion(choice, buttonEl) {
+      if (!activeQuestion) return;
+
+      const buttons = [...answersBox.querySelectorAll("button")];
+      buttons.forEach(btn => btn.disabled = true);
+
+      score.total++;
+
+      if (choice === activeQuestion.correct) {
+        score.correct++;
+        score.streak++;
+        buttonEl.classList.add("correct");
+        setMessage(encouragementsGood[randomInt(0, encouragementsGood.length - 1)], "good");
+        playTone(true);
+      } else {
+        score.wrong++;
+        score.streak = 0;
+        buttonEl.classList.add("wrong");
+        const correctBtn = buttons.find(btn => btn.textContent === activeQuestion.correct);
+        if (correctBtn) correctBtn.classList.add("correct");
+        setMessage(
+          `${encouragementsBad[randomInt(0, encouragementsBad.length - 1)]} Answer: ${activeQuestion.correct}`,
+          "bad"
+        );
+        playTone(false);
+      }
+
+      updateScoreUI();
+      activeQuestion = null;
+
+      if (testRunning) {
+        stopTimer();
+        testQuestionNum++;
+        updateProgress();
+
+        if (testQuestionNum >= TOTAL_QUESTIONS) {
+          finishTest();
+        } else {
+          startCountdown();
+        }
+      }
+    }
+
+    function speakCurrentTime() {
+      const text = `The time is ${timeToWords(currentHour, currentMinute)}.`;
+      if ("speechSynthesis" in window) {
+        const utterance = new SpeechSynthesisUtterance(text);
+        utterance.rate = 0.85;
+        utterance.pitch = 1.2;
+        speechSynthesis.cancel();
+        speechSynthesis.speak(utterance);
+      } else {
+        setMessage("Speech not supported on this browser.");
+      }
+    }
+
+    function playTone(success) {
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const notes = success ? [523.25, 659.25, 783.99] : [220, 196, 174.61];
+
+      notes.forEach((freq, i) => {
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
+        osc.type = success ? "sine" : "triangle";
+        osc.frequency.value = freq;
+        gain.gain.setValueAtTime(0.0001, now + i * 0.12);
+        gain.gain.exponentialRampToValueAtTime(0.12, now + i * 0.12 + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.0001, now + i * 0.12 + 0.18);
+        osc.connect(gain);
+        gain.connect(ctx.destination);
+        osc.start(now + i * 0.12);
+        osc.stop(now + i * 0.12 + 0.2);
+      });
+    }
+
+    function playCountdownTick() {
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 880;
+      gain.gain.setValueAtTime(0.15, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.15);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.15);
+    }
+
+    function playCountdownGo() {
+      if (!window.AudioContext && !window.webkitAudioContext) return;
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      const ctx = new AudioCtx();
+      const now = ctx.currentTime;
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = "sine";
+      osc.frequency.value = 1320;
+      gain.gain.setValueAtTime(0.2, now);
+      gain.gain.exponentialRampToValueAtTime(0.001, now + 0.3);
+      osc.connect(gain);
+      gain.connect(ctx.destination);
+      osc.start(now);
+      osc.stop(now + 0.3);
+    }
+
+    function startCountdown() {
+      let count = 3;
+      const overlay = document.createElement("div");
+      overlay.className = "countdown-overlay";
+      overlay.innerHTML = `<span>${count}</span>`;
+      clock.appendChild(overlay);
+      playCountdownTick();
+
+      countdownInterval = setInterval(() => {
+        count--;
+        if (count > 0) {
+          overlay.innerHTML = `<span>${count}</span>`;
+          playCountdownTick();
+        } else {
+          overlay.innerHTML = `<span>GO!</span>`;
+          playCountdownGo();
+          clearInterval(countdownInterval);
+          countdownInterval = null;
+          setTimeout(() => {
+            if (overlay.parentNode) overlay.remove();
+            nextTestQuestion();
+          }, 400);
+        }
+      }, 800);
+    }
+
+    function cancelCountdown() {
+      if (countdownInterval) {
+        clearInterval(countdownInterval);
+        countdownInterval = null;
+      }
+      const overlay = clock.querySelector(".countdown-overlay");
+      if (overlay) overlay.remove();
+    }
+
+    let hasEverDragged = false;
+
+    function dismissDragHint() {
+      if (hasEverDragged) return;
+      hasEverDragged = true;
+      const hint = clock.querySelector(".drag-hint");
+      if (hint) {
+        hint.classList.add("fade-out");
+        setTimeout(() => hint.remove(), 600);
+      }
+      document.getElementById("hourHand").classList.add("dragged");
+      document.getElementById("minuteHand").classList.add("dragged");
+    }
+
+    function addDragEvents(handEl, type) {
+      handEl.addEventListener("pointerdown", (e) => {
+        if (testRunning) return;
+        draggingHand = type;
+        handEl.classList.add("dragging");
+        handEl.setPointerCapture(e.pointerId);
+        dismissDragHint();
+      });
+      handEl.addEventListener("pointermove", (e) => {
+        if (draggingHand !== type) return;
+        handleDrag(e, type);
+      });
+      handEl.addEventListener("pointerup", (e) => {
+        draggingHand = null;
+        handEl.classList.remove("dragging");
+        handEl.releasePointerCapture?.(e.pointerId);
+      });
+      handEl.addEventListener("pointercancel", () => {
+        draggingHand = null;
+        handEl.classList.remove("dragging");
+      });
+    }
+
+    function handleDrag(event, type) {
+      const rect = clock.getBoundingClientRect();
+      const cx = rect.left + rect.width / 2;
+      const cy = rect.top + rect.height / 2;
+      const dx = event.clientX - cx;
+      const dy = event.clientY - cy;
+      let angle = Math.atan2(dy, dx) * 180 / Math.PI + 90;
+      if (angle < 0) angle += 360;
+
+      if (type === "minute") {
+        let minute = Math.round(angle / 6) % 60;
+        const d = currentDifficulty;
+        if (d === "hour") minute = 0;
+        else if (d === "half") minute = Math.round(minute / 30) * 30 % 60;
+        else if (d === "quarter") minute = Math.round(minute / 15) * 15 % 60;
+        else if (d === "five") minute = Math.round(minute / 5) * 5 % 60;
+        updateClock(currentHour, minute);
+      } else {
+        const hour = Math.round(angle / 30) % 12;
+        updateClock(hour, currentMinute);
+      }
+    }
+
+    // --- MODE SWITCHING ---
+    function switchMode(mode) {
+      currentMode = mode;
+      if (mode === "learning") {
+        learningModeBtn.classList.add("active");
+        learningModeBtn.classList.remove("inactive");
+        testModeBtn.classList.remove("active");
+        testModeBtn.classList.add("inactive");
+        learningControls.classList.remove("hidden");
+        testControls.classList.add("hidden");
+        suggestionsWrap.classList.remove("hidden");
+        testStatusWrap.classList.add("hidden");
+        testInfo.classList.add("hidden");
+        resultCard.classList.add("hidden");
+        questionSection.classList.remove("hidden");
+        stopTest();
+        setMessage("📚 Learning Mode! Explore and practice reading the clock.");
+        generateSuggestions();
+      } else {
+        testModeBtn.classList.add("active");
+        testModeBtn.classList.remove("inactive");
+        learningModeBtn.classList.remove("active");
+        learningModeBtn.classList.add("inactive");
+        learningControls.classList.add("hidden");
+        testControls.classList.remove("hidden");
+        suggestionsWrap.classList.add("hidden");
+        testStatusWrap.classList.remove("hidden");
+        testInfo.classList.remove("hidden");
+        resultCard.classList.add("hidden");
+        questionSection.classList.remove("hidden");
+        setMessage("🎯 Quiz Mode! Press Start for 10 questions.");
+        clearQuestion();
+      }
+    }
+
+    // --- TIMER ---
+    function startTimer() {
+      timerStart = Date.now();
+      timerInterval = setInterval(() => {
+        const elapsed = ((Date.now() - timerStart) / 1000).toFixed(1);
+        timerValue.textContent = `${elapsed}s`;
+      }, 100);
+    }
+
+    function stopTimer() {
+      if (timerInterval) {
+        clearInterval(timerInterval);
+        timerInterval = null;
+      }
+    }
+
+    function resetTimer() {
+      stopTimer();
+      timerValue.textContent = "0.0s";
+    }
+
+    function updateProgress() {
+      const pct = (testQuestionNum / TOTAL_QUESTIONS) * 100;
+      progressFill.style.width = `${pct}%`;
+      progressText.textContent = `${testQuestionNum}/${TOTAL_QUESTIONS}`;
+    }
+
+    // --- TEST MODE ---
+    function startTest() {
+      testRunning = true;
+      testQuestionNum = 0;
+      startTestBtn.classList.add("hidden");
+      stopTestBtn.classList.remove("hidden");
+      resultCard.classList.add("hidden");
+      questionSection.classList.remove("hidden");
+      score.correct = 0;
+      score.wrong = 0;
+      score.total = 0;
+      score.streak = 0;
+      updateScoreUI();
+      resetTimer();
+      updateProgress();
+      setMessage("⏱ Go! Answer as fast as you can!");
+      nextTestQuestion();
+    }
+
+    function stopTest() {
+      testRunning = false;
+      stopTimer();
+      cancelCountdown();
+      startTestBtn.classList.remove("hidden");
+      stopTestBtn.classList.add("hidden");
+    }
+
+    function finishTest() {
+      stopTest();
+      const pct = Math.round((score.correct / TOTAL_QUESTIONS) * 100);
+      resultPercent.textContent = `${pct}%`;
+      resultDetail.textContent = `${score.correct} correct, ${score.wrong} wrong out of ${TOTAL_QUESTIONS} questions`;
+
+      resultCard.classList.remove("hidden", "poor", "okay");
+      questionSection.classList.add("hidden");
+      if (pct < 50) resultCard.classList.add("poor");
+      else if (pct < 80) resultCard.classList.add("okay");
+
+      if (pct >= 80) setMessage(`🎉 Excellent! ${pct}% correct!`, "good");
+      else if (pct >= 50) setMessage(`👍 Good effort! ${pct}% correct.`);
+      else setMessage(`Keep practicing! ${pct}% — you'll improve!`, "bad");
+
+      progressFill.style.width = "100%";
+      progressText.textContent = `${TOTAL_QUESTIONS}/${TOTAL_QUESTIONS}`;
+      saveScore();
+    }
+
+    function nextTestQuestion() {
+      if (!testRunning) return;
+      const t = generateRandomTime();
+      updateClock(t.hour, t.minute);
+      createQuestion();
+      startTimer();
+    }
+
+    // --- SUGGESTIONS (Learning Mode) ---
+    function generateSuggestions() {
+      suggestionsBox.innerHTML = "";
+      const times = new Set();
+      while (times.size < 5) {
+        const t = generateRandomTime();
+        const key = `${t.hour === 0 ? 12 : t.hour}:${String(t.minute).padStart(2, "0")}`;
+        times.add(key);
+      }
+      [...times].forEach(time => {
+        const btn = document.createElement("button");
+        btn.className = "suggest-btn";
+        btn.textContent = time;
+        btn.addEventListener("click", () => {
+          const [h, m] = time.split(":").map(Number);
+          updateClock(h === 12 ? 0 : h, m);
+          setMessage(`Set to ${time} — what time is this?`);
+          createQuestion();
+        });
+        suggestionsBox.appendChild(btn);
+      });
+    }
+
+    // --- LEADERBOARD ---
+    const funnyNames = [
+      "Captain Clockwise", "Tick Tock Titan", "Minute Master",
+      "Sir Watches-a-Lot", "The Time Traveler", "Professor Tick",
+      "Clock Ninja", "Hour Hero", "Speedy Seconds",
+      "Time Wizard", "Dial Dynamo", "Clockzilla",
+      "The Flash Clock", "Señor Tiempo", "Baron Von Tick",
+      "Turbo Timer", "Chronos Jr.", "Minute Mouse",
+      "Captain O'Clock", "Time Tornado"
+    ];
+
+    function getRandomFunnyName() {
+      return funnyNames[randomInt(0, funnyNames.length - 1)];
+    }
+
+    function getLeaderboard() {
+      try {
+        return JSON.parse(localStorage.getItem("clock_leaderboard") || "[]");
+      } catch { return []; }
+    }
+
+    function isTopScore(pct) {
+      const lb = getLeaderboard();
+      if (lb.length < 10) return true;
+      return pct > lb[lb.length - 1].pct;
+    }
+
+    function saveScore() {
+      if (score.total === 0) return;
+      const pct = Math.round((score.correct / TOTAL_QUESTIONS) * 100);
+
+      if (!isTopScore(pct)) {
+        renderLeaderboard();
+        return;
+      }
+
+      showNameModal(pct);
+    }
+
+    function showNameModal(pct) {
+      const backdrop = document.createElement("div");
+      backdrop.className = "name-modal-backdrop";
+      const funnyPlaceholder = getRandomFunnyName();
+
+      backdrop.innerHTML = `
+        <div class="name-modal">
+          <h3>🏆 Top Score!</h3>
+          <p>You scored <strong>${pct}%</strong> — that's leaderboard-worthy!</p>
+          <input type="text" id="nameInput" placeholder="${funnyPlaceholder}" maxlength="20" autofocus />
+          <div class="modal-btns">
+            <button class="btn-green" id="nameSubmitBtn">Save</button>
+            <button class="btn-purple" id="nameSkipBtn">Use Funny Name</button>
+          </div>
+        </div>
+      `;
+      document.body.appendChild(backdrop);
+
+      const input = backdrop.querySelector("#nameInput");
+      const submitBtn = backdrop.querySelector("#nameSubmitBtn");
+      const skipBtn = backdrop.querySelector("#nameSkipBtn");
+
+      input.focus();
+
+      function commit(name) {
+        const lb = getLeaderboard();
+        const existing = lb.find(e => e.name.toLowerCase() === name.toLowerCase());
+
+        if (existing) {
+          if (pct > existing.pct) {
+            existing.pct = pct;
+            existing.correct = score.correct;
+            existing.total = TOTAL_QUESTIONS;
+            existing.date = new Date().toLocaleDateString();
+          }
+        } else {
+          lb.push({ name, pct, correct: score.correct, total: TOTAL_QUESTIONS, date: new Date().toLocaleDateString() });
+        }
+
+        lb.sort((a, b) => b.pct - a.pct);
+        if (lb.length > 10) lb.length = 10;
+        localStorage.setItem("clock_leaderboard", JSON.stringify(lb));
+        renderLeaderboard();
+        backdrop.remove();
+        setMessage(`🏆 ${name} added to leaderboard with ${pct}%!`, "good");
+      }
+
+      submitBtn.addEventListener("click", () => {
+        const name = input.value.trim() || getRandomFunnyName();
+        commit(name);
+      });
+
+      skipBtn.addEventListener("click", () => {
+        commit(getRandomFunnyName());
+      });
+
+      input.addEventListener("keydown", (e) => {
+        if (e.key === "Enter") {
+          const name = input.value.trim() || getRandomFunnyName();
+          commit(name);
+        }
+      });
+    }
+
+    function renderLeaderboard() {
+      const lb = getLeaderboard();
+      if (lb.length === 0) {
+        leaderboardList.innerHTML = "<li style='color:#999;font-size:0.85rem;'>No scores yet. Play a test!</li>";
+        return;
+      }
+      leaderboardList.innerHTML = lb.map((entry, i) => {
+        const medal = i === 0 ? "🥇" : i === 1 ? "🥈" : i === 2 ? "🥉" : `${i+1}.`;
+        return `<li><span>${medal} ${entry.name}</span><span class="lb-score">${entry.pct}%</span></li>`;
+      }).join("");
+    }
+
+    // --- THEME ---
+    function applyTheme(theme) {
+      const root = document.documentElement;
+      const themes = {
+        sunny: { bg1: "#fff7d6", bg2: "#dff7ff", accent3: "#6c8cff" },
+        ocean: { bg1: "#dff9ff", bg2: "#e7f0ff", accent3: "#4361ee" },
+        candy: { bg1: "#fff0f6", bg2: "#f3e8ff", accent3: "#8b5cf6" },
+        space: { bg1: "#1f2340", bg2: "#2d3a72", accent3: "#a0c4ff" }
+      };
+      const t = themes[theme];
+      root.style.setProperty("--bg1", t.bg1);
+      root.style.setProperty("--bg2", t.bg2);
+      root.style.setProperty("--accent3", t.accent3);
+      document.body.style.color = theme === "space" ? "#edf2ff" : "#24324a";
+    }
+
+    // --- EVENT LISTENERS ---
+    learningModeBtn.addEventListener("click", () => switchMode("learning"));
+    testModeBtn.addEventListener("click", () => switchMode("test"));
+    randomTimeBtn.addEventListener("click", setRandomTime);
+    askQuestionBtn.addEventListener("click", () => {
+      createQuestion();
+      setMessage("Look carefully at the clock and pick the right time!");
+    });
+    speakBtn.addEventListener("click", speakCurrentTime);
+    showCurrentTimeBtn.addEventListener("click", showCurrentTime);
+    newSuggestionsBtn.addEventListener("click", generateSuggestions);
+
+    startTestBtn.addEventListener("click", startTest);
+    stopTestBtn.addEventListener("click", () => {
+      stopTest();
+      setMessage(`Test stopped. ✅ ${score.correct} right, ❌ ${score.wrong} wrong.`);
+      clearQuestion();
+    });
+
+    resetScoreBtn.addEventListener("click", () => {
+      score.correct = 0;
+      score.wrong = 0;
+      score.total = 0;
+      score.streak = 0;
+      updateScoreUI();
+      resetTimer();
+      clearQuestion();
+      progressFill.style.width = "0%";
+      progressText.textContent = "0/10";
+      setMessage("Score reset! Ready for a fresh start? 🆕");
+    });
+
+    difficultyPicker.addEventListener("click", (e) => {
+      const pill = e.target.closest(".diff-pill");
+      if (!pill) return;
+      difficultyPicker.querySelectorAll(".diff-pill").forEach(p => p.classList.remove("active"));
+      pill.classList.add("active");
+      currentDifficulty = pill.dataset.value;
+      updateSecondHandVisibility();
+      setMessage(`Difficulty: ${pill.textContent.trim()}`);
+      if (currentMode === "learning") {
+        setRandomTime();
+        generateSuggestions();
+      }
+    });
+
+    function updateSecondHandVisibility() {
+      const hand = document.getElementById("secondHand");
+      if (!hand) return;
+      if (currentDifficulty === "second") {
+        hand.classList.add("visible");
+      } else {
+        hand.classList.remove("visible");
+      }
+    }
+
+    themeSelect.addEventListener("change", () => applyTheme(themeSelect.value));
+
+    // --- INIT ---
+    buildClockFace();
+    const nowInit = new Date();
+    updateClock(nowInit.getHours() % 12, nowInit.getMinutes(), true);
+    startRealtimeClock();
+    updateScoreUI();
+    applyTheme("sunny");
+    generateSuggestions();
+    renderLeaderboard();
+  </script>
+</body>
+</html>
